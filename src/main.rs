@@ -1,43 +1,79 @@
+use std::io::{stdin, stdout, Write};
 use std::path::{Path, PathBuf};
-use std::env;
-use std::io::{Write, stdin, stdout};
+use std::{cmp, env};
 use termion::{color, event::Key, input::TermRead, raw::IntoRawMode, style};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq)]
 struct Entry {
     path: PathBuf,
-    name: String
+    name: String,
 }
 
 impl Entry {
     fn to_string(&self) -> String {
         if self.path.is_dir() {
-            format!("{}{}{}", color::Cyan.fg_str(), self.name, color::Reset.fg_str())
+            format!(
+                "{}{}{}",
+                color::Fg(color::Cyan),
+                self.name,
+                color::Fg(color::Reset)
+            )
+        } else if self.path.is_symlink() {
+            format!(
+                "{}{}{}{}{}",
+                color::Fg(color::Green),
+                self.name,
+                " -> ",
+                self.path.read_link().unwrap().to_str().unwrap(),
+                color::Fg(color::Reset)
+            )
         } else {
             format!("{}", self.name)
         }
     }
 }
 
-fn get_entries(dir: &Path) -> (Vec<Entry>) {
+impl cmp::PartialOrd for Entry {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.name.to_lowercase().cmp(&other.name.to_lowercase()))
+    }
+}
+
+impl cmp::Ord for Entry {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.name.to_lowercase().cmp(&other.name.to_lowercase())
+    }
+}
+
+fn get_entries(dir: &Path) -> Vec<Entry> {
     let mut entries: Vec<Entry> = Vec::new();
 
     if let Ok(dir_entries) = dir.read_dir() {
         for entry in dir_entries {
             if let Ok(entry) = entry {
                 if let Some(fname) = entry.file_name().to_str() {
-                    entries.push(Entry { path: entry.path(), name: String::from(fname) });
+                    entries.push(Entry {
+                        path: entry.path(),
+                        name: String::from(fname),
+                    });
                 }
             }
         }
     }
-    
+
     entries.sort();
     entries
 }
 
 fn clear_screen() {
-    write!(stdout(), "{}{}{}", termion::clear::All, termion::cursor::Goto(1, 1), termion::cursor::Hide).unwrap();
+    write!(
+        stdout(),
+        "{}{}{}",
+        termion::clear::All,
+        termion::cursor::Goto(1, 1),
+        termion::cursor::Hide
+    )
+    .unwrap();
     stdout().flush().unwrap();
 }
 
@@ -47,9 +83,21 @@ fn display(sel: u8, entries: &Vec<Entry>) {
     let mut idx = 0;
     for entry in entries {
         if idx == sel {
-            write!(stdout(), "{}{}", color::LightBlack.bg_str(), style::Bold.to_string()).unwrap();
+            write!(
+                stdout(),
+                "{}{}",
+                color::Bg(color::LightBlack),
+                style::Bold.to_string()
+            )
+            .unwrap();
             write!(stdout(), "> {}", entry.to_string()).unwrap();
-            write!(stdout(), "{}{}\r\n", color::Reset.bg_str(), style::Reset.to_string()).unwrap();
+            write!(
+                stdout(),
+                "{}{}\r\n",
+                color::Bg(color::Reset),
+                style::Reset.to_string()
+            )
+            .unwrap();
         } else {
             write!(stdout(), "  {}\r\n", entry.to_string()).unwrap();
         }
@@ -66,7 +114,7 @@ fn move_up(current_dir: &mut PathBuf, entries: &mut Vec<Entry>, sel: &mut u8) {
         *entries = get_entries(&current_dir);
         match entries.iter().position(|e| e.name == child) {
             Some(idx) => *sel = idx as u8,
-            None => *sel = 0
+            None => *sel = 0,
         }
     }
 }
@@ -93,10 +141,20 @@ fn main() {
     for c in stdin.keys() {
         match c.unwrap() {
             Key::Char('q') => break,
-            Key::Up => if sel > 0 { sel -= 1 },
-            Key::Down => if sel < entries.len() as u8 - 1 { sel +=1 },
+            Key::Esc => break,
+            Key::Up => {
+                if sel > 0 {
+                    sel -= 1
+                }
+            }
+            Key::Down => {
+                if sel < entries.len() as u8 - 1 {
+                    sel += 1
+                }
+            }
             Key::Left => move_up(&mut current_dir, &mut entries, &mut sel),
             Key::Right => move_down(&mut current_dir, &mut entries, &mut sel),
+            Key::Char('\n') => move_down(&mut current_dir, &mut entries, &mut sel),
             _ => {}
         }
 

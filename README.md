@@ -5,7 +5,8 @@ This is a simple file manager I'm writing as a project to learn Rust. Right now 
 ```
 up/down:      Select previous/next entry in the directory
 left/right:   Move up/down a directory
-q:            Quit
+enter:        Move down a directory, or <TODO: open file>
+q/esc:        Quit
 ```
 
 ### TODO
