@@ -1,49 +1,11 @@
+use std::cmp::min;
+use std::env;
 use std::io::{stdin, stdout, Write};
 use std::path::{Path, PathBuf};
-use std::{cmp, env};
 use termion::{color, event::Key, input::TermRead, raw::IntoRawMode, style};
 
-#[derive(PartialEq, Eq)]
-struct Entry {
-    path: PathBuf,
-    name: String,
-}
-
-impl Entry {
-    fn to_string(&self) -> String {
-        if self.path.is_dir() {
-            format!(
-                "{}{}{}",
-                color::Fg(color::Cyan),
-                self.name,
-                color::Fg(color::Reset)
-            )
-        } else if self.path.is_symlink() {
-            format!(
-                "{}{}{}{}{}",
-                color::Fg(color::Green),
-                self.name,
-                " -> ",
-                self.path.read_link().unwrap().to_str().unwrap(),
-                color::Fg(color::Reset)
-            )
-        } else {
-            format!("{}", self.name)
-        }
-    }
-}
-
-impl cmp::PartialOrd for Entry {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.name.to_lowercase().cmp(&other.name.to_lowercase()))
-    }
-}
-
-impl cmp::Ord for Entry {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.name.to_lowercase().cmp(&other.name.to_lowercase())
-    }
-}
+mod entry;
+use crate::entry::Entry;
 
 fn get_entries(dir: &Path) -> Vec<Entry> {
     let mut entries: Vec<Entry> = Vec::new();
@@ -65,6 +27,29 @@ fn get_entries(dir: &Path) -> Vec<Entry> {
     entries
 }
 
+fn move_up(current_dir: &mut PathBuf, entries: &mut Vec<Entry>, sel: &mut u8) {
+    let cd = current_dir.clone();
+    let child = cd.file_name().unwrap().to_str().unwrap();
+    if current_dir.pop() {
+        *entries = get_entries(&current_dir);
+        match entries.iter().position(|e| e.name == child) {
+            Some(idx) => *sel = idx as u8,
+            None => *sel = 0,
+        }
+    }
+}
+
+fn move_down(current_dir: &mut PathBuf, entries: &mut Vec<Entry>, sel: &mut u8) {
+    let selected = &entries[*sel as usize];
+    if selected.path.is_dir() {
+        *current_dir = selected.path.clone();
+        *entries = get_entries(&current_dir);
+        *sel = 0;
+    }
+}
+
+// DISPLAY
+
 fn clear_screen() {
     write!(
         stdout(),
@@ -77,12 +62,20 @@ fn clear_screen() {
     stdout().flush().unwrap();
 }
 
+fn get_term_size() -> (u16, u16) {
+    termion::terminal_size().unwrap()
+}
+
 fn display(sel: u8, entries: &Vec<Entry>) {
     clear_screen();
 
+    let (_width, height) = get_term_size();
     let mut idx = 0;
-    for entry in entries {
-        if idx == sel {
+    let display_start = calculate_display_start(sel, height as u8, entries.len() as u16);
+    let displayed_entries = get_displayed_entries(display_start, height, entries.clone());
+
+    for entry in displayed_entries {
+        if idx == sel - display_start as u8 {
             write!(
                 stdout(),
                 "{}{}",
@@ -107,24 +100,29 @@ fn display(sel: u8, entries: &Vec<Entry>) {
     }
 }
 
-fn move_up(current_dir: &mut PathBuf, entries: &mut Vec<Entry>, sel: &mut u8) {
-    let cd = current_dir.clone();
-    let child = cd.file_name().unwrap().to_str().unwrap();
-    if current_dir.pop() {
-        *entries = get_entries(&current_dir);
-        match entries.iter().position(|e| e.name == child) {
-            Some(idx) => *sel = idx as u8,
-            None => *sel = 0,
-        }
+fn get_displayed_entries(display_start: u16, height: u16, entries: Vec<Entry>) -> Vec<Entry> {
+    if entries.len() > height as usize {
+        let range =
+            (display_start as usize)..min(entries.len(), display_start as usize + height as usize);
+        let mut return_vec: Vec<Entry> = Vec::new();
+        return_vec.extend_from_slice(&entries[range]);
+        return_vec
+    } else {
+        entries
     }
 }
 
-fn move_down(current_dir: &mut PathBuf, entries: &mut Vec<Entry>, sel: &mut u8) {
-    let selected = &entries[*sel as usize];
-    if selected.path.is_dir() {
-        *current_dir = selected.path.clone();
-        *entries = get_entries(&current_dir);
-        *sel = 0;
+fn calculate_display_start(sel: u8, term_height: u8, num_entries: u16) -> u16 {
+    if num_entries < term_height as u16 {
+        return 0;
+    }
+
+    if (sel as u16) < num_entries / 2 {
+        0
+    } else if (sel as u16) > num_entries - (term_height as u16) / 2 {
+        num_entries - term_height as u16
+    } else {
+        (sel as u16) - (term_height as u16) / 2
     }
 }
 

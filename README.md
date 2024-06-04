@@ -10,8 +10,7 @@ q/esc:        Quit
 ```
 
 ### TODO
-- Sort directory entries
-- Support scrolling for directories containing more than <termion::terminal_size> lines
+- Fix weird scrolling jump
 - Preview files
 - Open files with vim
 
