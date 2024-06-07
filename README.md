@@ -10,7 +10,12 @@ q/esc:        Quit
 ```
 
 ### TODO
-- Fix weird scrolling jump
+#### Features
 - Preview files
 - Open files with vim
+- Bottom bar with file/folder info
+- Save previous pointer position in a folder, so it pops up in the same spot upon returning
+- Support resizing
 
+#### Bug Fixes
+- Fix flickering
