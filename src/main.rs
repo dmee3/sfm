@@ -1,32 +1,16 @@
-use std::env;
+extern crate chrono;
+extern crate termion;
+
+use file_system::entry::Entry;
+use file_system::{current_dir, get_entries};
 use std::io::{stdin, stdout, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use termion::screen::IntoAlternateScreen;
 use termion::{event::Key, input::TermRead, raw::IntoRawMode};
 
 mod display;
-
-mod entry;
-use crate::entry::Entry;
-
-fn get_entries(dir: &Path) -> Vec<Entry> {
-    let mut entries: Vec<Entry> = Vec::new();
-
-    if let Ok(dir_entries) = dir.read_dir() {
-        for entry in dir_entries {
-            if let Ok(entry) = entry {
-                if let Some(fname) = entry.file_name().to_str() {
-                    entries.push(Entry {
-                        path: entry.path(),
-                        name: String::from(fname),
-                    });
-                }
-            }
-        }
-    }
-
-    entries.sort();
-    entries
-}
+mod file_system;
+mod navigation;
 
 fn move_up(current_dir: &mut PathBuf, entries: &mut Vec<Entry>, sel: &mut u8) {
     let cd = current_dir.clone();
@@ -51,9 +35,13 @@ fn move_down(current_dir: &mut PathBuf, entries: &mut Vec<Entry>, sel: &mut u8) 
 
 fn main() {
     let stdin = stdin();
-    let mut stdout = stdout().into_raw_mode().unwrap();
+    let mut stdout = stdout()
+        .into_raw_mode()
+        .unwrap()
+        .into_alternate_screen()
+        .unwrap();
 
-    let mut current_dir = env::current_dir().unwrap();
+    let mut current_dir = current_dir();
     let mut entries = get_entries(&current_dir);
     let mut sel: u8 = 0;
 

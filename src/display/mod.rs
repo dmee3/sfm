@@ -2,7 +2,7 @@ use std::io::{stdout, Write};
 
 use termion::{color, style};
 
-use crate::entry::Entry;
+use crate::file_system::entry::Entry;
 
 pub struct Display {
     w: usize,
@@ -18,28 +18,25 @@ impl Display {
         }
     }
 
-    pub fn calculate_display_start(&self, sel: u8, num_entries: u16) -> u16 {
+    pub fn calculate_display_start(&self, sel_idx: u8, num_entries: u16) -> u16 {
         let height = self.usable_height();
 
         if num_entries < height as u16 {
             return 0;
         }
 
-        if sel < height as u8 / 2 {
+        if sel_idx < height as u8 / 2 {
             0
-        } else if (sel as u16) > num_entries - (height as u16) / 2 {
+        } else if (sel_idx as u16) > num_entries - (height as u16) / 2 {
             num_entries - height as u16
         } else {
-            (sel as u16) - (height as u16) / 2
+            (sel_idx as u16) - (height as u16) / 2
         }
     }
 
-    pub fn get_displayed_entries(
-        &self,
-        display_start: u16,
-        height: u16,
-        entries: Vec<Entry>,
-    ) -> Vec<Entry> {
+    // This shouldn't live in this module but not sure of a better place for it
+    pub fn get_displayed_entries(&self, display_start: u16, entries: Vec<Entry>) -> Vec<Entry> {
+        let height = self.usable_height();
         if entries.len() > height as usize {
             let range = (display_start as usize)
                 ..std::cmp::min(entries.len(), display_start as usize + height as usize);
@@ -57,8 +54,7 @@ impl Display {
 
     pub fn render(&self, entries: &Vec<Entry>, sel: u8) {
         let display_start = self.calculate_display_start(sel, entries.len() as u16);
-        let displayed_entries =
-            self.get_displayed_entries(display_start, self.usable_height(), entries.clone());
+        let displayed_entries = self.get_displayed_entries(display_start, entries.clone());
 
         // Reset screen
         let mut output_string = self.clear();

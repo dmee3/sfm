@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local};
-use std::{cmp, path::PathBuf, time::UNIX_EPOCH};
+use std::{cmp, path::PathBuf};
 use termion::color;
 
 #[derive(PartialEq, Eq, Clone)]

@@ -9,13 +9,3 @@ enter:        Move down a directory, or <TODO: open file>
 q/esc:        Quit
 ```
 
-### TODO
-#### Features
-- Preview files
-- Open files with vim
-- Bottom bar with file/folder info
-- Save previous pointer position in a folder, so it pops up in the same spot upon returning
-- Support resizing
-
-#### Bug Fixes
-- Fix flickering
