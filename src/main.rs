@@ -62,6 +62,20 @@ fn main() {
                     sel += 1
                 }
             }
+            Key::ShiftUp => {
+                if sel > 10 {
+                    sel -= 10
+                } else {
+                    sel = 0
+                }
+            }
+            Key::ShiftDown => {
+                if sel < entries.len() as u8 - 10 {
+                    sel += 10
+                } else {
+                    sel = entries.len() as u8 - 1
+                }
+            }
             Key::Left => move_up(&mut current_dir, &mut entries, &mut sel),
             Key::Right => move_down(&mut current_dir, &mut entries, &mut sel),
             Key::Char('\n') => move_down(&mut current_dir, &mut entries, &mut sel),

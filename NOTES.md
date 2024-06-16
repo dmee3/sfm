@@ -13,8 +13,7 @@
 ## Features
 - Preview files???
 - Open files with vim
-- Add current folder to bottom bar
-  - Consider moving last modified info to the side of the directory contents, unless preview box is there?
+- Consider moving last modified info from the bottom bar to the side of the directory contents, unless preview box is there?
 - Save previous selector index position in a folder, so it pops up in the same spot upon returning
 - Support resizing
 
