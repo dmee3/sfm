@@ -46,7 +46,7 @@ fn main() {
     let mut sel: u8 = 0;
 
     let display = display::Display::new();
-    display.render(&entries, sel);
+    display.render(&entries, sel, &current_dir);
 
     for c in stdin.keys() {
         match c.unwrap() {
@@ -68,7 +68,7 @@ fn main() {
             _ => {}
         }
 
-        display.render(&entries, sel);
+        display.render(&entries, sel, &current_dir);
     }
 
     write!(stdout, "{}", termion::cursor::Show).unwrap();

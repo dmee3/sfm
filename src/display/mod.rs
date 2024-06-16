@@ -1,4 +1,7 @@
-use std::io::{stdout, Write};
+use std::{
+    io::{stdout, Write},
+    path::PathBuf,
+};
 
 use termion::{color, style};
 
@@ -49,10 +52,10 @@ impl Display {
     }
 
     pub fn usable_height(&self) -> u16 {
-        self.h as u16 - 1
+        self.h as u16 - 3
     }
 
-    pub fn render(&self, entries: &Vec<Entry>, sel: u8) {
+    pub fn render(&self, entries: &Vec<Entry>, sel: u8, current_dir: &PathBuf) {
         let display_start = self.calculate_display_start(sel, entries.len() as u16);
         let displayed_entries = self.get_displayed_entries(display_start, entries.clone());
 
@@ -65,6 +68,9 @@ impl Display {
         ));
 
         let mut idx = 0;
+
+        // draw top bar
+        output_string.push_str(&self.top_bar(current_dir));
 
         // Draw all entries
         for entry in displayed_entries {
@@ -110,6 +116,32 @@ impl Display {
         return format!("  {}\r\n", entry.to_string());
     }
 
+    fn top_bar(&self, current_dir: &PathBuf) -> String {
+        // Set up color and position
+        let mut output_string = String::new();
+        output_string.push_str(&format!(
+            "{}{}{}",
+            termion::cursor::Goto(1, 1),
+            color::Bg(color::LightYellow),
+            color::Fg(color::Black)
+        ));
+
+        // Text and filler (spaces)
+        let bar_text = format!(" {}", current_dir.display());
+        let filler = std::iter::repeat(" ")
+            .take(self.w - bar_text.len())
+            .collect::<String>();
+        output_string.push_str(&format!(
+            "{}{}{}{}{}",
+            bar_text,
+            filler,
+            color::Bg(color::Reset),
+            color::Fg(color::Reset),
+            std::iter::repeat(" ").take(self.w).collect::<String>()
+        ));
+        return output_string;
+    }
+
     fn bottom_bar(&self, entry: &Entry) -> String {
         // Set up color and position
         let mut output_string = String::new();
@@ -122,6 +154,7 @@ impl Display {
 
         // Text and filler (spaces)
         let bar_text = format!(" Modified {}", entry.last_modified_readable());
+        // let bar_text = format!(" {}", current_dir.display());
         let filler = std::iter::repeat(" ")
             .take(self.w - bar_text.len())
             .collect::<String>();
